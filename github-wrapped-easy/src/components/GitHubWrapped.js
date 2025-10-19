@@ -25,10 +25,11 @@ const GitHubWrapped = () => {
       if (token.trim()) {
         headers.Authorization = `token ${token}`;
         setIsAuthenticated(true);
+      } else {
+        setIsAuthenticated(false);
       }
       
-      // TODO: Fetch user data from `https://api.github.com/users/...`, look at the GitHub API docs to learn more.
-      const userResponse = await None; // CHANGE THIS
+      const userResponse = await axios.get(`https://api.github.com/users/${username}`, { headers });
       setUserData(userResponse.data);
       
       // Fetch user repositories (includes private repos if authenticated)
@@ -60,8 +61,8 @@ const GitHubWrapped = () => {
     const languageCount = {};
     repos.forEach(repo => {
       if (repo.language) {
-        // TODO: update the count of each language found
-        languageCount[repo.language] = -1;
+        // Increment the count of each language found
+        languageCount[repo.language] = (languageCount[repo.language] || 0) + 1;
       }
     });
     
@@ -71,15 +72,15 @@ const GitHubWrapped = () => {
   };
 
   const getTopRepos = () => {
-    return repos
+    return [...repos]
       .sort((a, b) => {
         // First sort by most recently updated
         const dateA = new Date(a.updated_at);
         const dateB = new Date(b.updated_at);
         
         if (dateB.getTime() !== dateA.getTime()) {
-            // TODO: return the value that will sort the repos by most recently updated
-          return -1;
+            // Sort so the most recently updated repositories appear first
+          return dateB.getTime() - dateA.getTime();
         }
         
         // If same update date, sort by stars as tiebreaker
@@ -90,9 +91,11 @@ const GitHubWrapped = () => {
 
   const getMostRecentRepo = () => {
     if (repos.length === 0) return null;
-    // TODO: return the most recently updated repo
-    // hint: you can use similar logic to getTopRepos
-    return null;
+    // Return the most recently updated repository
+    return repos.reduce((mostRecent, repo) => {
+      if (!mostRecent) return repo;
+      return new Date(repo.updated_at) > new Date(mostRecent.updated_at) ? repo : mostRecent;
+    }, null);
   };
 
   const nextSlide = () => {
@@ -130,7 +133,11 @@ const GitHubWrapped = () => {
                placeholder="Enter your GitHub username"
                value={username}
                onChange={(e) => setUsername(e.target.value)}
-               onKeyPress={(e) => {}} // TODO: call fetchGitHubData when the user presses Enter
+               onKeyPress={(e) => {
+                 if (e.key === 'Enter') {
+                   fetchGitHubData();
+                 }
+               }}
                className="username-input"
                autoComplete="off"
                autoCorrect="off"
@@ -143,7 +150,11 @@ const GitHubWrapped = () => {
                placeholder="GitHub Personal Access Token (optional, for private repos)"
                value={token}
                onChange={(e) => setToken(e.target.value)}
-               onKeyPress={(e) => {}} // TODO: call fetchGitHubData when the user presses Enter
+               onKeyPress={(e) => {
+                 if (e.key === 'Enter') {
+                   fetchGitHubData();
+                 }
+               }}
                className="password-input"
                autoComplete="new-password"
                autoCorrect="off"
@@ -163,7 +174,7 @@ const GitHubWrapped = () => {
               </a>
             </div>
             <button 
-              onClick={() => {}} // TODO: call fetchGitHubData when clicked
+              onClick={fetchGitHubData}
               disabled={loading || !username.trim()}
               className="generate-btn"
             >
